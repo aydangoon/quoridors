@@ -1,0 +1,1 @@
+# Quoridors offline ver.
