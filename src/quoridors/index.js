@@ -1,2 +1,2 @@
 export * from './board-logic';
-export * from './drawing';
+export * from './consts';

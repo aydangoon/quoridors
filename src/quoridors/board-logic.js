@@ -1,11 +1,3 @@
-import { N, Colors, PLAYERS } from './consts';
-const GOALS = {
-  '1': { r: N-1 },
-  '2': { r: 0 },
-  '3': { c: N-1 },
-  '4': { c: 0 }
-};
-
 export function initNodeMatrix(settings) {
   const { N, numPlayers } = settings;
   let m = [];
@@ -23,7 +15,7 @@ export function initNodeMatrix(settings) {
   return m;
 }
 
-export function initAdjacencyMatrix(settings) {
+export function initAdjacencyMatrix(idToPos, settings) {
   const { N } = settings;
   let m = [];
   let i, j, iPos, jPos, rDiff, cDiff;
@@ -40,52 +32,17 @@ export function initAdjacencyMatrix(settings) {
   return m;
 }
 
-export function posToId() {
-  let r, c;
-  if (typeof arguments[0] === 'object') {
-    r = arguments[0].r;
-    c = arguments[0].c;
-  } else {
-    r = arguments[0];
-    c = arguments[1];
-  }
-  return N*r + c;
+export function initGoals(settings) {
+  const { N } = settings;
+  return {
+    '1': { r: N-1 },
+    '2': { r: 0 },
+    '3': { c: N-1 },
+    '4': { c: 0 }
+  };
 }
 
-export function idToPos(id) {
-  return { r: Math.floor(id / N), c: id % N};
-}
-
-// Expects edge (idA, idB) to exist.
-export function isHorizontalEdge(idA, idB) {
-  const aPos = idToPos(idA);
-  const bPos = idToPos(idB);
-  return aPos.r - bPos.r !== 0;
-}
-
-export function posOfPlayer(nodeMatrix, pid) {
-  for (let r = 0; r < nodeMatrix.length; r++) {
-    for (let c = 0; c < nodeMatrix[r].length; c++) {
-      if (nodeMatrix[r][c] === pid) {
-        return { r, c };
-      }
-    }
-  }
-  return null;
-}
-
-export function isValidMove(nodeMatrix, adjacencyMatrix, from, to) {
-  const fromId = posToId(from);
-  const toId = posToId(to);
-  const path = getPath(adjacencyMatrix, fromId, to);
-  const jumps = path.reduce((acc, curr) => {
-    let {r, c} = idToPos(curr);
-    return acc + (nodeMatrix[r][c] > 0 ? 1 : 0);
-  }, 0);
-  return nodeMatrix[to.r][to.c] === 0 && path && path.length === jumps + 1;
-}
-
-export function getPath(adjacencyMatrix, src, goal) {
+export function getPath(idToPos, adjacencyMatrix, src, goal) {
   const anyRow = goal.r === undefined;
   const anyCol = goal.c === undefined;
   const marked = new Set(); // set of visited node ids
@@ -121,7 +78,6 @@ export function getPath(adjacencyMatrix, src, goal) {
 }
 
 export function neighbors(adjacencyMatrix, nodeId) {
-  console.log('NODE ID', nodeId);
   const ids = [];
   adjacencyMatrix[nodeId].forEach((val, i) => {
     if (val === 0) {
@@ -129,49 +85,4 @@ export function neighbors(adjacencyMatrix, nodeId) {
     }
   });
   return ids;
-}
-
-export function isValidPlacement(nodeMatrix, adjacencyMatrix, edges) {
-  const noEdgeThere = edges.reduce(
-    (acc, {from, to}) => acc && (adjacencyMatrix[from][to] === 0),
-    true
-  );
-  if (!noEdgeThere) {
-    console.log('edge already there');
-    return false;
-  }
-
-  place(adjacencyMatrix, -1, edges);
-  const noPlayerStuck =
-    [1, 2]
-    .map(id => getPath(adjacencyMatrix, posToId(posOfPlayer(nodeMatrix, id)), GOALS[id]))
-    .reduce((acc, curr) => acc && (curr ? true : false), true);
-  place(adjacencyMatrix, 0, edges);
-  if (!noPlayerStuck) {
-    console.log('A PLAYER IS NOW STUCK');
-    return false;
-  }
-  return true;
-}
-
-// from and to are positions
-export function move(nodeMatrix, from, to) {
-  nodeMatrix[to.r][to.c] = nodeMatrix[from.r][from.c];
-  nodeMatrix[from.r][from.c] = 0;
-  return nodeMatrix;
-}
-
-// from and to are ids
-export function place(adjacencyMatrix, pid, edges) {
-  edges.forEach(({ from, to }) => {
-    adjacencyMatrix[from][to] = pid;
-    adjacencyMatrix[to][from] = pid;
-  });
-  return adjacencyMatrix;
-}
-
-export function hasWon(pid, pos) {
-  const anyRow = GOALS[pid].r === undefined;
-  const anyCol = GOALS[pid].c === undefined;
-  return (anyRow || pos.r === GOALS[pid].r) && (anyCol || GOALS[pid].c === pos.c);
 }

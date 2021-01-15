@@ -1,5 +1,3 @@
-export const N = 3;
-export const PLAYERS = 2;
 export const Colors = {
   NODE: '#252627',
   EDGE: '#363738',
