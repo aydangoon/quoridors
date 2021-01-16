@@ -15,20 +15,23 @@ export function initNodeMatrix(settings) {
   return m;
 }
 
-export function initAdjacencyMatrix(idToPos, settings) {
+export function initAdjacencyList(idToPos, settings) {
   const { N } = settings;
   let m = [];
   let i, j, iPos, jPos, rDiff, cDiff;
   for (i = 0; i < N*N; i++) {
-    m.push([]);
+    m.push({});
     for (j = 0; j < N*N; j++) {
       iPos = idToPos(i);
       jPos = idToPos(j);
       rDiff = Math.abs(iPos.r - jPos.r);
       cDiff = Math.abs(iPos.c - jPos.c);
-      m[i].push(((cDiff === 1 && rDiff === 0) || (cDiff === 0 && rDiff === 1)) ? 0 : -1);
+      if ((cDiff === 1 && rDiff === 0) || (cDiff === 0 && rDiff === 1)) {
+        m[i][j] = 0;
+      }
     }
   }
+  console.log(m);
   return m;
 }
 
@@ -42,47 +45,49 @@ export function initGoals(settings) {
   };
 }
 
-export function getPath(idToPos, adjacencyMatrix, src, goal) {
+export function pathExists(idToPos, adjacencyList, src, goal) {
   const anyRow = goal.r === undefined;
   const anyCol = goal.c === undefined;
   const marked = new Set(); // set of visited node ids
   marked.add(src);
-  const parentOf = {};
   const queue = [src];
   let node, i, children, child;
   while (queue.length > 0) {
-    console.log(queue, marked);
     node = queue.shift();
-    children = neighbors(adjacencyMatrix, node);
-    //console.log(node, children);
+    children = neighbors(adjacencyList, node);
     for (i = 0; i < children.length; i++) {
       child = children[i];
       if (!marked.has(child)) {
         marked.add(child);
-        parentOf[child] = node;
         queue.push(child);
       }
       let { r, c } = idToPos(child);
       if ((anyCol || goal.c === c) && (anyRow || goal.r === r)) {
-        console.log('WE ESCAPED');
-        let path = [];
-        while (child) {
-          path.push(child);
-          child = parentOf[child];
-        }
-        return path;
+        return true;
       }
     }
   }
-  return null;
+  return false;
 }
 
-export function neighbors(adjacencyMatrix, nodeId) {
+export function neighbors(adjacencyList, nodeId) {
   const ids = [];
-  adjacencyMatrix[nodeId].forEach((val, i) => {
-    if (val === 0) {
-      ids.push(i);
+  Object.entries(adjacencyList[nodeId]).forEach(([id, val]) => {
+    if (parseInt(val) === 0) {
+      ids.push(parseInt(id));
     }
   });
   return ids;
+}
+
+export function swapDir(dir) {
+  let dir1, dir2;
+  if (dir.c !== 0) {
+    dir1 = { r: -1, c: 0 };
+    dir2 = { r: 1, c: 0 };
+  } else {
+    dir1 = { c: -1, r: 0 };
+    dir2 = { c: 1, r: 0 };
+  }
+  return { dir1, dir2 };
 }

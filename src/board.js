@@ -18,14 +18,13 @@ export default class Board extends React.Component {
 
   draw() {
     const ctx = this.canvasRef.current.getContext('2d');
-    const { nodeMatrix, adjacencyMatrix, idToPos, isHorizontalEdge } = this.props;
+    const { nodeMatrix, adjacencyList, idToPos, isHorizontalEdge } = this.props;
     const { N } = this.props.settings;
 
     const boardSide = ctx.canvas.width;
     const tileSide = boardSide / N;
     const edgeShortSide = 0.2 * tileSide;
     const nodeSide = tileSide - edgeShortSide;
-    const edgeLongSide = tileSide;
 
     ctx.clearRect(0, 0, boardSide, boardSide);
 
@@ -51,13 +50,17 @@ export default class Board extends React.Component {
     }
 
     // draw edges
-    let edgeVal, width, height;
-    for (from = 0; from < adjacencyMatrix.length; from++) {
-      for (to = from + 1; to < adjacencyMatrix[from].length; to++) {
-        edgeVal = adjacencyMatrix[from][to];
-        if (edgeVal <= 0) continue;
+    let width, height;
+    for (from = 0; from < adjacencyList.length; from++) {
+      for (to = from + 1; to < adjacencyList.length; to++) {
+        if (adjacencyList[from][to] === undefined) {
+          continue;
+        }
+        const val = adjacencyList[from][to];
+        if (val <= 0) {
+          continue;
+        }
         const fromPos = idToPos(from);
-        const toPos = idToPos(to);
         if (isHorizontalEdge(from, to)) {
           topX = fromPos.c * tileSide;
           topY = (fromPos.r * tileSide) + (edgeShortSide / 2) + nodeSide;
@@ -69,7 +72,7 @@ export default class Board extends React.Component {
           width = edgeShortSide;
           height = tileSide;
         }
-        ctx.fillStyle = Colors.PLAYERS[edgeVal];
+        ctx.fillStyle = Colors.PLAYERS[val];
         ctx.fillRect(topX, topY, width, height);
       }
     }
@@ -86,10 +89,10 @@ export default class Board extends React.Component {
   }
 
   coordsToQuadrant(x, y) {
+    const { posToId } = this.props;
     const { N } = this.props.settings;
     const ctx = this.canvasRef.current.getContext('2d');
     const tileSide = ctx.canvas.width / N;
-    const quadrantSide = tileSide;
 
     const topLeft = {
       r: Math.floor((y - (tileSide / 2)) / tileSide),
@@ -97,10 +100,10 @@ export default class Board extends React.Component {
     }
 
     return {
-      topLeft: topLeft,
-      topRight: {r: topLeft.r, c: topLeft.c + 1},
-      bottomLeft: {r: topLeft.r + 1, c: topLeft.c},
-      bottomRight: {r: topLeft.r + 1, c: topLeft.c + 1}
+      topLeft: posToId(topLeft),
+      topRight: posToId(topLeft.r, topLeft.c + 1),
+      bottomLeft: posToId(topLeft.r + 1, topLeft.c),
+      bottomRight: posToId(topLeft.r + 1, topLeft.c + 1)
     };
   }
 

@@ -10,6 +10,7 @@ export default class Game extends React.Component {
     super(props);
     this.settings = this.props;
     this.idToPos = this.idToPos.bind(this);
+    this.posToId = this.posToId.bind(this);
     this.reset = this.reset.bind(this);
     this.state = {
       turn: 1,
@@ -18,7 +19,7 @@ export default class Game extends React.Component {
       horizontalEdge: true,
       goals: Q.initGoals(this.settings),
       nodeMatrix: Q.initNodeMatrix(this.settings),
-      adjacencyMatrix: Q.initAdjacencyMatrix(this.idToPos, this.settings)
+      adjacencyList: Q.initAdjacencyList(this.idToPos, this.settings)
     };
   }
 
@@ -30,7 +31,7 @@ export default class Game extends React.Component {
       horizontalEdge: true,
       goals: Q.initGoals(this.settings),
       nodeMatrix: Q.initNodeMatrix(this.settings),
-      adjacencyMatrix: Q.initAdjacencyMatrix(this.idToPos, this.settings)
+      adjacencyList: Q.initAdjacencyList(this.idToPos, this.settings)
     });
   }
 
@@ -55,6 +56,7 @@ export default class Game extends React.Component {
         <Board {...this.state}
           handleClick={this.handleClick.bind(this)}
           idToPos={this.idToPos}
+          posToId={this.posToId}
           isHorizontalEdge={this.isHorizontalEdge.bind(this)}
           settings={this.settings} />
         <p>Player {this.state.turn}'s turn.</p>
@@ -78,7 +80,7 @@ export default class Game extends React.Component {
 
   // a single position
   handleMove(pos) {
-    const { turn, nodeMatrix, adjacencyMatrix } = this.state;
+    const { turn } = this.state;
     const currPos = this.posOfPlayer(turn);
     if (this.isValidMove(currPos, pos)) {
       this.move(currPos, pos);
@@ -92,34 +94,44 @@ export default class Game extends React.Component {
     }
   }
 
-  // a quadrant is 4 positions
+  // a quadrant is 4 node ids
   handlePlace(quadrant) {
-    let edge1, edge2;
-    const { turn, adjacencyMatrix, nodeMatrix, horizontalEdge } = this.state;
+    let edge1, edge2, edge3, edge4;
+    let top = {
+      from: quadrant.topLeft,
+      to: quadrant.topRight
+    };
+    let right = {
+      from: quadrant.topRight,
+      to: quadrant.bottomRight
+    };
+    let bottom = {
+      from: quadrant.bottomRight,
+      to: quadrant.bottomLeft
+    };
+    let left = {
+      from: quadrant.bottomLeft,
+      to: quadrant.topLeft
+    };
+    const { turn, horizontalEdge, adjacencyList } = this.state;
     if (horizontalEdge) {
-      edge1 = {
-        from: this.posToId(quadrant.topLeft),
-        to: this.posToId(quadrant.bottomLeft)
-      };
-      edge2 = {
-        from: this.posToId(quadrant.topRight),
-        to: this.posToId(quadrant.bottomRight)
-      }
+      edge1 = left;
+      edge2 = right;
+      edge3 = top;
+      edge4 = bottom;
     } else {
-      edge1 = {
-        from: this.posToId(quadrant.topLeft),
-        to: this.posToId(quadrant.topRight)
-      };
-      edge2 = {
-        from: this.posToId(quadrant.bottomLeft),
-        to: this.posToId(quadrant.bottomRight)
-      }
+      edge1 = top;
+      edge2 = bottom;
+      edge3 = left;
+      edge4 = right;
     }
     if (this.isValidPlacement([edge1, edge2])) {
-      this.setState({
-        turn: 1 + (turn) % this.props.numPlayers,
-        adjacencyMatrix: this.place(turn, [edge1, edge2])
-      });
+      if (adjacencyList[edge3.from][edge3.to] === 0 || adjacencyList[edge4.from][edge4.to] === 0) {
+        this.setState({
+          turn: 1 + (turn) % this.props.numPlayers,
+          adjacencyList: this.place(turn, [edge1, edge2])
+        });
+      }
     } else {
       alert('invalid placement');
     }
@@ -154,15 +166,15 @@ export default class Game extends React.Component {
 
   // check if a move is valid given current game state
   isValidMove(fromPos, toPos) {
-    const { nodeMatrix, adjacencyMatrix } = this.state;
+    const { nodeMatrix, adjacencyList } = this.state;
     const fromId = this.posToId(fromPos);
     const toId = this.posToId(toPos);
-    const path = Q.getPath(this.idToPos, adjacencyMatrix, fromId, toPos);
-    const jumps = path.reduce((acc, curr) => {
-      let {r, c} = this.idToPos(curr);
-      return acc + (nodeMatrix[r][c] > 0 ? 1 : 0);
-    }, 0);
-    return nodeMatrix[toPos.r][toPos.c] === 0 && path && path.length === jumps + 1;
+    const dirs = [{r:0, c:1}, {r:0,c:-1}, {r:1,c:0}, {r:-1, c:0}];
+    const visited = new Set();
+    const moves = new Set();
+    visited.add(fromId);
+    dirs.forEach(dir => this.getMoves(fromPos, dir, visited, moves));
+    return moves.has(toId);
   }
 
   // get the r and c of a player id
@@ -180,26 +192,23 @@ export default class Game extends React.Component {
 
   // check if a set of edge placements is valid given current game state
   isValidPlacement(edges) {
-    const { goals, nodeMatrix, adjacencyMatrix } = this.state;
+    const { goals, adjacencyList } = this.state;
     const noEdgeThere = edges.reduce(
-      (acc, {from, to}) => acc && (adjacencyMatrix[from][to] === 0),
+      (acc, {from, to}) => acc && adjacencyList[from][to] === 0,
       true
     );
     if (!noEdgeThere) {
-      console.log('edge already there');
       return false;
     }
-
     this.place(-1, edges);
     const noPlayerStuck =
       (new Array(this.settings.numPlayers))
       .fill(0)
       .map((val, i) => i + 1)
-      .map(id => Q.getPath(this.idToPos, adjacencyMatrix, this.posToId(this.posOfPlayer(id)), goals[id]))
-      .reduce((acc, curr) => acc && (curr ? true : false), true);
+      .map(id => Q.pathExists(this.idToPos, adjacencyList, this.posToId(this.posOfPlayer(id)), goals[id]))
+      .reduce((acc, curr) => acc && curr, true);
     this.place(0, edges);
     if (!noPlayerStuck) {
-      console.log('A PLAYER IS NOW STUCK');
       return false;
     }
     return true;
@@ -214,12 +223,12 @@ export default class Game extends React.Component {
   }
 
   place(pid, edges) {
-    const { adjacencyMatrix } = this.state;
+    const { adjacencyList } = this.state;
     edges.forEach(({ from, to }) => {
-      adjacencyMatrix[from][to] = pid;
-      adjacencyMatrix[to][from] = pid;
+      adjacencyList[from][to] = pid;
+      adjacencyList[to][from] = pid;
     });
-    return adjacencyMatrix;
+    return adjacencyList;
   }
 
   hasWon(pid, pos) {
@@ -227,6 +236,42 @@ export default class Game extends React.Component {
     const anyRow = goals[pid].r === undefined;
     const anyCol = goals[pid].c === undefined;
     return (anyRow || pos.r === goals[pid].r) && (anyCol || goals[pid].c === pos.c);
+  }
+
+  getMoves(src, dir, visited, moves) {
+    const { N } = this.settings;
+    const { nodeMatrix, adjacencyList, turn } = this.state;
+    const pos = {r: src.r + dir.r, c: src.c + dir.c};
+
+    const posId = this.posToId(pos);
+    if (visited.has(posId)) {
+      return;
+    } else {
+      visited.add(posId);
+    }
+
+    // out of bounds
+    if (pos.r < 0 || pos.c < 0 || pos.r >= N || pos.c >= N) {
+      return;
+    }
+
+    // edge in the way?
+    if (adjacencyList[this.posToId(src)][this.posToId(pos)] !== 0) {
+      const val = nodeMatrix[src.r][src.c];
+      if (val !== 0 && val !== turn) {
+        const { dir1, dir2 } = Q.swapDir(dir);
+        this.getMoves(src, dir1, visited, moves);
+        this.getMoves(src, dir2, visited, moves);
+      }
+      return;
+    }
+
+    const toVal = nodeMatrix[pos.r][pos.c];
+    if (toVal !== 0 && toVal !== turn) {
+      this.getMoves(pos, dir, visited, moves);
+    } else {
+      moves.add(posId);
+    }
   }
 
 }

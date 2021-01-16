@@ -7,8 +7,8 @@ export default class App extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      N: 7,
-      numPlayers: 4,
+      N: 5,
+      numPlayers: 2,
       inGame: true
     };
   }
