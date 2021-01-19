@@ -1,6 +1,6 @@
 import logo from './logo.svg';
 import './App.css';
-import Game from './game';
+import QuoridorWrapper from './quoridor-wrapper';
 import React from 'react';
 
 export default class App extends React.Component {
@@ -15,7 +15,7 @@ export default class App extends React.Component {
   render() {
     return (
       <div>
-        {this.state.inGame ? <Game {...this.state}/> : <div />}
+        {this.state.inGame ? <QuoridorWrapper {...this.state}/> : <div />}
       </div>
     );
   }

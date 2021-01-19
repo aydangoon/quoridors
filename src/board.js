@@ -18,8 +18,10 @@ export default class Board extends React.Component {
 
   draw() {
     const ctx = this.canvasRef.current.getContext('2d');
-    const { nodeMatrix, adjacencyList, idToPos, isHorizontalEdge } = this.props;
-    const { N } = this.props.settings;
+    const quoridors                     = this.props.quoridors;
+    const { nodeMatrix, adjacencyList } = quoridors;
+    const utils                         = quoridors.utils;
+    const { N }                         = quoridors.settings;
 
     const boardSide = ctx.canvas.width;
     const tileSide = boardSide / N;
@@ -60,8 +62,8 @@ export default class Board extends React.Component {
         if (val <= 0) {
           continue;
         }
-        const fromPos = idToPos(from);
-        if (isHorizontalEdge(from, to)) {
+        const fromPos = utils.idToPos(from);
+        if (utils.isHorizontalEdge(from, to)) {
           topX = fromPos.c * tileSide;
           topY = (fromPos.r * tileSide) + (edgeShortSide / 2) + nodeSide;
           width = tileSide;
@@ -79,7 +81,7 @@ export default class Board extends React.Component {
   }
 
   coordsToPos(x, y) {
-    const { N } = this.props.settings;
+    const { N } = this.props.quoridors.settings;
     const ctx = this.canvasRef.current.getContext('2d');
     const tileSide = ctx.canvas.width / N;
     return {
@@ -89,8 +91,8 @@ export default class Board extends React.Component {
   }
 
   coordsToQuadrant(x, y) {
-    const { posToId } = this.props;
-    const { N } = this.props.settings;
+    const utils = this.props.quoridors.utils;
+    const { N } = this.props.quoridors.settings;
     const ctx = this.canvasRef.current.getContext('2d');
     const tileSide = ctx.canvas.width / N;
 
@@ -100,10 +102,10 @@ export default class Board extends React.Component {
     }
 
     return {
-      topLeft: posToId(topLeft),
-      topRight: posToId(topLeft.r, topLeft.c + 1),
-      bottomLeft: posToId(topLeft.r + 1, topLeft.c),
-      bottomRight: posToId(topLeft.r + 1, topLeft.c + 1)
+      topLeft: utils.posToId(topLeft),
+      topRight: utils.posToId(topLeft.r, topLeft.c + 1),
+      bottomLeft: utils.posToId(topLeft.r + 1, topLeft.c),
+      bottomRight: utils.posToId(topLeft.r + 1, topLeft.c + 1)
     };
   }
 

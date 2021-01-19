@@ -1,49 +1,4 @@
-export function initNodeMatrix(settings) {
-  const { N, numPlayers } = settings;
-  let m = [];
-  for (let i = 0; i < N; i++)
-    m.push((new Array(N)).fill(0));
-
-  // add players
-  const half = Math.floor(N/2);
-  if (numPlayers > 3)
-    m[half][N - 1] = 4;
-  if (numPlayers > 2)
-    m[half][0] = 3;
-  m[0][half] = 1;
-  m[N - 1][half] = 2;
-  return m;
-}
-
-export function initAdjacencyList(idToPos, settings) {
-  const { N } = settings;
-  let m = [];
-  let i, j, iPos, jPos, rDiff, cDiff;
-  for (i = 0; i < N*N; i++) {
-    m.push({});
-    for (j = 0; j < N*N; j++) {
-      iPos = idToPos(i);
-      jPos = idToPos(j);
-      rDiff = Math.abs(iPos.r - jPos.r);
-      cDiff = Math.abs(iPos.c - jPos.c);
-      if ((cDiff === 1 && rDiff === 0) || (cDiff === 0 && rDiff === 1)) {
-        m[i][j] = 0;
-      }
-    }
-  }
-  console.log(m);
-  return m;
-}
-
-export function initGoals(settings) {
-  const { N } = settings;
-  return {
-    '1': { r: N-1 },
-    '2': { r: 0 },
-    '3': { c: N-1 },
-    '4': { c: 0 }
-  };
-}
+import _ from 'lodash';
 
 export function pathExists(idToPos, adjacencyList, src, goal) {
   const anyRow = goal.r === undefined;
@@ -80,7 +35,16 @@ export function neighbors(adjacencyList, nodeId) {
   return ids;
 }
 
-export function swapDir(dir) {
+export function place(adjacencyList, pid, edges) {
+  const li = _.cloneDeep(adjacencyList);
+  edges.forEach(({ from, to }) => {
+    li[from][to] = pid;
+    li[to][from] = pid;
+  });
+  return li;
+}
+
+export function getPerpendicularDirections(dir) {
   let dir1, dir2;
   if (dir.c !== 0) {
     dir1 = { r: -1, c: 0 };
@@ -89,5 +53,38 @@ export function swapDir(dir) {
     dir1 = { c: -1, r: 0 };
     dir2 = { c: 1, r: 0 };
   }
-  return { dir1, dir2 };
+  return [dir1, dir2];
+}
+
+export function getDirections() {
+  return [{r:0, c:1}, {r:0,c:-1}, {r:1,c:0}, {r:-1, c:0}];
+}
+
+export function sumPositions(...positions) {
+  let res = {r: 0, c: 0};
+  positions.forEach(({r, c}) => {
+    res.r += r;
+    res.c += c;
+  });
+  return res;
+}
+
+export function getQuadrantEdges(quadrant) {
+  let top = {
+    from: quadrant.topLeft,
+    to: quadrant.topRight
+  };
+  let right = {
+    from: quadrant.topRight,
+    to: quadrant.bottomRight
+  };
+  let bottom = {
+    from: quadrant.bottomRight,
+    to: quadrant.bottomLeft
+  };
+  let left = {
+    from: quadrant.bottomLeft,
+    to: quadrant.topLeft
+  };
+  return { top, right, bottom, left };
 }
