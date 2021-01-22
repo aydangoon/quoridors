@@ -1,21 +1,21 @@
 import logo from './logo.svg';
 import './App.css';
-import QuoridorWrapper from './quoridor-wrapper';
+import Quoridors from './quoridors';
 import React from 'react';
 
 export default class App extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      N: 5,
-      numPlayers: 2,
+      numSides: 40,
+      numPlayers: 4,
       inGame: true
     };
   }
   render() {
     return (
       <div>
-        {this.state.inGame ? <QuoridorWrapper {...this.state}/> : <div />}
+        {this.state.inGame ? <Quoridors {...this.state}/> : <div />}
       </div>
     );
   }

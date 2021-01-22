@@ -1,11 +1,13 @@
 import React from 'react';
-import { Colors } from './quoridors';
+import { Colors } from './quoridors/';
+import * as Q from './quoridors/';
+import { Settings, QuoridorState, Pos, Quadrant, QuoridorsContext } from './types';
 
 // Manages the drawing of the board as well as collecting data about
-// a users click. No other logic.
-export default class Board extends React.Component {
-
-  constructor(props) {
+// a users click. No other state or logic.
+export default class Board extends React.Component<QuoridorsContext, {}> {
+  canvasRef: any;
+  constructor(props: QuoridorsContext) {
     super(props);
     this.canvasRef = React.createRef();
   }
@@ -16,15 +18,14 @@ export default class Board extends React.Component {
     this.draw();
   }
 
-  draw() {
+  draw(): void {
     const ctx = this.canvasRef.current.getContext('2d');
-    const quoridors                     = this.props.quoridors;
-    const { nodeMatrix, adjacencyList } = quoridors;
-    const utils                         = quoridors.utils;
-    const { N }                         = quoridors.settings;
+    const { q, settings } = this.props;
+    const { nodeMatrix, adjacencyList } = q;
+    const { numSides } = settings;
 
     const boardSide = ctx.canvas.width;
-    const tileSide = boardSide / N;
+    const tileSide = boardSide / numSides;
     const edgeShortSide = 0.2 * tileSide;
     const nodeSide = tileSide - edgeShortSide;
 
@@ -62,8 +63,8 @@ export default class Board extends React.Component {
         if (val <= 0) {
           continue;
         }
-        const fromPos = utils.idToPos(from);
-        if (utils.isHorizontalEdge(from, to)) {
+        const fromPos = Q.idToPos(settings, from);
+        if (Q.isHorizontalEdge(settings, from, to)) {
           topX = fromPos.c * tileSide;
           topY = (fromPos.r * tileSide) + (edgeShortSide / 2) + nodeSide;
           width = tileSide;
@@ -80,21 +81,21 @@ export default class Board extends React.Component {
     }
   }
 
-  coordsToPos(x, y) {
-    const { N } = this.props.quoridors.settings;
+  coordsToPos(x: number, y: number): Pos {
+    const { numSides } = this.props.settings;
     const ctx = this.canvasRef.current.getContext('2d');
-    const tileSide = ctx.canvas.width / N;
+    const tileSide = ctx.canvas.width / numSides;
     return {
       r: Math.floor(y / tileSide),
       c: Math.floor(x / tileSide)
     };
   }
 
-  coordsToQuadrant(x, y) {
-    const utils = this.props.quoridors.utils;
-    const { N } = this.props.quoridors.settings;
+  coordsToQuadrant(x: number, y: number): Quadrant {
+    const settings = this.props.settings;
+    const { numSides } = settings;
     const ctx = this.canvasRef.current.getContext('2d');
-    const tileSide = ctx.canvas.width / N;
+    const tileSide = ctx.canvas.width / numSides;
 
     const topLeft = {
       r: Math.floor((y - (tileSide / 2)) / tileSide),
@@ -102,14 +103,14 @@ export default class Board extends React.Component {
     }
 
     return {
-      topLeft: utils.posToId(topLeft),
-      topRight: utils.posToId(topLeft.r, topLeft.c + 1),
-      bottomLeft: utils.posToId(topLeft.r + 1, topLeft.c),
-      bottomRight: utils.posToId(topLeft.r + 1, topLeft.c + 1)
+      topLeft: Q.posToId(settings, topLeft),
+      topRight: Q.posToId(settings, Q.sumPositions(topLeft, {r: 0, c: 1})),
+      bottomLeft: Q.posToId(settings, Q.sumPositions(topLeft, {r: 1, c: 0})),
+      bottomRight: Q.posToId(settings, Q.sumPositions(topLeft, {r: 1, c: 1}))
     };
   }
 
-  getClickData(e) {
+  getClickData(e: any): { pos: Pos, quadrant: Quadrant } {
     const rect = this.canvasRef.current.getBoundingClientRect();
     const x = (e.clientX - rect.left);
     const y = (e.clientY - rect.top);
